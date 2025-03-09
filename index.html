@@ -1,0 +1,1204 @@
+<!DOCTYPE
+html >
+  <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factory Digital Twin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #10b981;
+            --border-radius: 12px;
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Factory Visualization */
+        .factory-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .control-panel {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.25rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Enhanced 3D Factory Container */
+        .factory-scene {
+            position: relative;
+            perspective: 2000px;
+            margin: 2rem 0;
+            min-height: 500px;
+        }
+
+        #factory-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 2rem;
+            transform-style: preserve-3d;
+            transform: rotateX(20deg) rotateZ(0deg);
+            transition: transform 1s ease;
+            padding: 2rem 0;
+        }
+
+        /* Enhanced Machine Cube */
+        .machine-cube {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            transform-style: preserve-3d;
+            transition: all 0.6s ease;
+            cursor: pointer;
+            transform-origin: center center;
+        }
+
+        .machine-cube:hover {
+            transform: translateZ(30px) scale(1.05) rotateY(15deg);
+        }
+
+        .machine-cube.selected {
+            transform: translateZ(50px) scale(1.1) rotateY(25deg);
+            z-index: 10;
+        }
+
+        .machine-cube .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .machine-cube .front {
+            transform: translateZ(110px);
+            background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
+            border-radius: var(--border-radius);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+
+        .machine-cube .back {
+            transform: rotateY(180deg) translateZ(110px);
+            background: linear-gradient(145deg, var(--bg-tertiary), var(--bg-secondary));
+            border-radius: var(--border-radius);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+
+        .machine-cube .right {
+            transform: rotateY(90deg) translateZ(110px);
+            width: 220px;
+            background-color: var(--bg-tertiary);
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .machine-cube .left {
+            transform: rotateY(-90deg) translateZ(110px);
+            width: 220px;
+            background-color: var(--bg-tertiary);
+            border-radius: var(--border-radius) 0 0 var(--border-radius);
+        }
+
+        .machine-cube .top {
+            transform: rotateX(90deg) translateZ(110px);
+            height: 220px;
+            background-color: var(--bg-tertiary);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .machine-cube .bottom {
+            transform: rotateX(-90deg) translateZ(110px);
+            height: 220px;
+            background-color: var(--bg-tertiary);
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+        }
+
+        .machine-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .machine-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .machine-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+        }
+
+        .machine-status.warning {
+            background-color: var(--warning-color);
+        }
+
+        .machine-status.danger {
+            background-color: var(--danger-color);
+        }
+
+        .machine-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: auto;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .stat-bar {
+            width: 100%;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width var(--transition-speed), background-color var(--transition-speed);
+        }
+
+        .stat-bar-fill.normal {
+            background-color: var(--success-color);
+        }
+
+        .stat-bar-fill.warning {
+            background-color: var(--warning-color);
+        }
+
+        .stat-bar-fill.danger {
+            background-color: var(--danger-color);
+        }
+
+        .machine-cube.high-temp .front {
+            background: linear-gradient(145deg, #4b1d1d, var(--danger-color));
+        }
+
+        @keyframes vibration {
+            0%, 100% { transform: translateZ(110px) rotate(0deg); }
+            25% { transform: translateZ(110px) rotate(-1deg); }
+            75% { transform: translateZ(110px) rotate(1deg); }
+        }
+
+        .machine-cube.high-vibration .front {
+            animation: vibration 0.2s infinite;
+        }
+
+        /* Machine Details */
+        .machine-details {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .machine-details.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .details-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .close-details {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+
+        .details-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .detail-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* View Controls */
+        .view-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Data Table */
+        .data-table-container {
+            background-color: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .table-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        #data-controls {
+            width: 100%;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        /* Tabulator Overrides */
+        .tabulator {
+            background-color: transparent;
+            border: none;
+        }
+
+        .tabulator-header {
+            background-color: var(--bg-tertiary);
+            border: none;
+        }
+
+        .tabulator-col {
+            background-color: transparent;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tabulator-col-title {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .tabulator-row {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tabulator-row:nth-child(even) {
+            background-color: var(--bg-tertiary);
+        }
+
+        .tabulator-cell {
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <div class="header">
+            <h1 class="page-title">Factory Dashboard</h1>
+            <div class="header-actions">
+                <button class="btn">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    New Simulation
+                </button>
+            </div>
+        </div>
+
+        <div class="factory-wrapper">
+            <div class="control-panel">
+                <button id="add-machine" class="btn">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Add Machine
+                </button>
+                <button id="remove-machine" class="btn btn-danger">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Remove Machine
+                </button>
+                <button id="simulate-failure" class="btn">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    Simulate Failure
+                </button>
+                <button id="reset-simulation" class="btn">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"></path>
+                    </svg>
+                    Reset
+                </button>
+            </div>
+            
+            <div class="view-controls">
+                <button id="rotate-left" class="btn">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 14 4 9 9 4"></polyline>
+                        <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+                    </svg>
+                    Rotate Left
+                </button>
+                <button id="rotate-right" class="btn">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 14 20 9 15 4"></polyline>
+                        <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+                    </svg>
+                    Rotate Right
+                </button>
+            </div>
+            
+            <div class="factory-scene">
+                <div id="factory-container"></div>
+                <div id="machine-details" class="machine-details">
+                    <div class="details-header">
+                        <h2 class="details-title">Machine Details</h2>
+                        <button class="close-details" id="close-details">×</button>
+                    </div>
+                    <div class="details-content" id="details-content">
+                        <!-- Details will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-table-container">
+            <div class="table-header">
+                <h2 class="table-title">Machine Data</h2>
+                <div class="table-actions">
+                    <button class="btn" id="import-data">
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Import Data
+                    </button>
+                    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display: none;" />
+                    <button class="btn" id="export-data">
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export Data
+                    </button>
+                </div>
+            </div>
+            <div id="data-controls"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const TEMP_THRESHOLD_WARNING = 50;
+        const TEMP_THRESHOLD_DANGER = 70;
+        const VIBRATION_THRESHOLD_WARNING = 30;
+        const VIBRATION_THRESHOLD_DANGER = 50;
+
+        // State management
+        let machineData = [];
+        let nextMachineId = 1;
+        let selectedMachineId = null;
+        let rotationY = 0;
+
+        // Create machine cube with enhanced 3D design
+        function createMachineCube(machine) {
+            const cube = document.createElement('div');
+            cube.className = 'machine-cube';
+            cube.id = `machine-${machine.id}`;
+
+            // Determine machine status
+            let statusClass = 'normal';
+            if (machine.temperature > TEMP_THRESHOLD_DANGER) {
+                statusClass = 'danger';
+            } else if (machine.temperature > TEMP_THRESHOLD_WARNING) {
+                statusClass = 'warning';
+            }
+
+            // Create all faces of the cube
+            const faces = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+            
+            faces.forEach(face => {
+                const faceElement = document.createElement('div');
+                faceElement.className = `face ${face}`;
+                
+                // Add content to front face
+                if (face === 'front') {
+                    // Machine header with title and status indicator
+                    const machineHeader = document.createElement('div');
+                    machineHeader.className = 'machine-header';
+                    
+                    const machineTitle = document.createElement('div');
+                    machineTitle.className = 'machine-title';
+                    machineTitle.textContent = `Machine ${machine.id}`;
+                    
+                    const machineStatus = document.createElement('div');
+                    machineStatus.className = `machine-status ${statusClass}`;
+                    
+                    machineHeader.appendChild(machineTitle);
+                    machineHeader.appendChild(machineStatus);
+                    
+                    // Machine stats with visual indicators
+                    const statsDiv = document.createElement('div');
+                    statsDiv.className = 'machine-stats';
+                    
+                    // Temperature stat
+                    const tempStat = document.createElement('div');
+                    tempStat.className = 'stat-item';
+                    
+                    const tempLabel = document.createElement('div');
+                    tempLabel.className = 'stat-label';
+                    tempLabel.innerHTML = 'Temperature <span>' + machine.temperature + '°C</span>';
+                    
+                    const tempBar = document.createElement('div');
+                    tempBar.className = 'stat-bar';
+                    
+                    const tempBarFill = document.createElement('div');
+                    tempBarFill.className = `stat-bar-fill ${statusClass}`;
+                    tempBarFill.style.width = `${Math.min(100, (machine.temperature / 100) * 100)}%`;
+                    
+                    tempBar.appendChild(tempBarFill);
+                    tempStat.appendChild(tempLabel);
+                    tempStat.appendChild(tempBar);
+                    
+                    // Vibration stat
+                    const vibStat = document.createElement('div');
+                    vibStat.className = 'stat-item';
+                    
+                    const vibLabel = document.createElement('div');
+                    vibLabel.className = 'stat-label';
+                    vibLabel.innerHTML = 'Vibration <span>' + machine.vibration + ' Hz</span>';
+                    
+                    const vibBar = document.createElement('div');
+                    vibBar.className = 'stat-bar';
+                    
+                    // Determine vibration status
+                    let vibStatusClass = 'normal';
+                    if (machine.vibration > VIBRATION_THRESHOLD_DANGER) {
+                        vibStatusClass = 'danger';
+                    } else if (machine.vibration > VIBRATION_THRESHOLD_WARNING) {
+                        vibStatusClass = 'warning';
+                    }
+                    
+                    const vibBarFill = document.createElement('div');
+                    vibBarFill.className = `stat-bar-fill ${vibStatusClass}`;
+                    vibBarFill.style.width = `${Math.min(100, (machine.vibration / 100) * 100)}%`;
+                    
+                    vibBar.appendChild(vibBarFill);
+                    vibStat.appendChild(vibLabel);
+                    vibStat.appendChild(vibBar);
+                    
+                    // Add stats to the stats container
+                    statsDiv.appendChild(tempStat);
+                    statsDiv.appendChild(vibStat);
+                    
+                    // Assemble the front face
+                    faceElement.appendChild(machineHeader);
+                    faceElement.appendChild(statsDiv);
+                }
+                
+                // Add content to back face
+                if (face === 'back') {
+                    const backContent = document.createElement('div');
+                    backContent.innerHTML = `
+                        <div class="machine-header">
+                            <div class="machine-title">Machine ${machine.id} Details</div>
+                        </div>
+                        <div class="machine-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Status</div>
+                                <div class="stat-value">${getStatusText(machine)}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Last Updated</div>
+                                <div class="stat-value">${new Date().toLocaleTimeString()}</div>
+                            </div>
+                        </div>
+                    `;
+                    faceElement.appendChild(backContent);
+                }
+                
+                cube.appendChild(faceElement);
+            });
+
+            // Apply visual effects based on machine state
+            if (machine.temperature > TEMP_THRESHOLD_DANGER) {
+                cube.classList.add('high-temp');
+            }
+            if (machine.vibration > VIBRATION_THRESHOLD_DANGER) {
+                cube.classList.add('high-vibration');
+            }
+
+            // Add click event to select machine and show details
+            cube.addEventListener('click', () => {
+                // Deselect previously selected machine
+                if (selectedMachineId) {
+                    const prevSelected = document.getElementById(`machine-${selectedMachineId}`);
+                    if (prevSelected) {
+                        prevSelected.classList.remove('selected');
+                    }
+                }
+                
+                // Select this machine
+                selectedMachineId = machine.id;
+                cube.classList.add('selected');
+                
+                // Highlight the corresponding row in the data table
+                if (dataTable) {
+                    dataTable.selectRow(machine.id);
+                }
+                
+                // Show machine details
+                showMachineDetails(machine);
+            });
+
+            return cube;
+        }
+
+        // Show machine details panel
+        function showMachineDetails(machine) {
+            const detailsPanel = document.getElementById('machine-details');
+            const detailsContent = document.getElementById('details-content');
+            
+            // Create details content
+            detailsContent.innerHTML = `
+                <div class="detail-group">
+                    <div class="detail-label">Machine ID</div>
+                    <div class="detail-value">${machine.id}</div>
+                </div>
+                <div class="detail-group">
+                    <div class="detail-label">Temperature</div>
+                    <div class="detail-value">${machine.temperature}°C</div>
+                </div>
+                <div class="detail-group">
+                    <div class="detail-label">Vibration</div>
+                    <div class="detail-value">${machine.vibration} Hz</div>
+                </div>
+                <div class="detail-group">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">${getStatusText(machine)}</div>
+                </div>
+                <div class="detail-group">
+                    <div class="detail-label">Last Updated</div>
+                    <div class="detail-value">${new Date().toLocaleTimeString()}</div>
+                </div>
+            `;
+            
+            // Show the panel
+            detailsPanel.classList.add('active');
+        }
+        
+        // Get status text based on machine data
+        function getStatusText(machine) {
+            if (machine.temperature > TEMP_THRESHOLD_DANGER || machine.vibration > VIBRATION_THRESHOLD_DANGER) {
+                return 'Critical';
+            } else if (machine.temperature > TEMP_THRESHOLD_WARNING || machine.vibration > VIBRATION_THRESHOLD_WARNING) {
+                return 'Warning';
+            } else {
+                return 'Operational';
+            }
+        }
+
+        // Close machine details panel
+        document.getElementById('close-details').addEventListener('click', () => {
+            document.getElementById('machine-details').classList.remove('active');
+        });
+
+        // Render factory visualization
+        function renderFactory() {
+            const factoryContainer = document.getElementById('factory-container');
+            factoryContainer.innerHTML = '';
+
+            machineData.forEach(machine => {
+                const machineCube = createMachineCube(machine);
+                factoryContainer.appendChild(machineCube);
+            });
+        }
+
+        // Create data table with enhanced styling
+        let dataTable;
+        function createDataTable() {
+            if (dataTable) {
+                dataTable.destroy();
+            }
+            
+            dataTable = new Tabulator("#data-controls", {
+                data: machineData,
+                layout: "fitColumns",
+                selectable: 1,
+                rowClick: function(e, row) {
+                    // Deselect previously selected machine
+                    if (selectedMachineId) {
+                        const prevSelected = document.getElementById(`machine-${selectedMachineId}`);
+                        if (prevSelected) {
+                            prevSelected.classList.remove('selected');
+                        }
+                    }
+                    
+                    // Select the clicked machine
+                    const machineId = row.getData().id;
+                    selectedMachineId = machineId;
+                    const machineCube = document.getElementById(`machine-${machineId}`);
+                    if (machineCube) {
+                        machineCube.classList.add('selected');
+                        
+                        // Show machine details
+                        const machine = machineData.find(m => m.id === machineId);
+                        if (machine) {
+                            showMachineDetails(machine);
+                        }
+                    }
+                },
+                columns: [
+                    {title: "ID", field: "id", width: 80},
+                    {
+                        title: "Temperature (°C)", 
+                        field: "temperature", 
+                        editor: "number",
+                        cellEdited: updateMachine,
+                        formatter: function(cell) {
+                            const value = cell.getValue();
+                            let color = "var(--success-color)";
+                            
+                            if (value > TEMP_THRESHOLD_DANGER) {
+                                color = "var(--danger-color)";
+                            } else if (value > TEMP_THRESHOLD_WARNING) {
+                                color = "var(--warning-color)";
+                            }
+                            
+                            return `<span style="color: ${color}; font-weight: 600;">${value}</span>`;
+                        }
+                    },
+                    {
+                        title: "Vibration (Hz)", 
+                        field: "vibration", 
+                        editor: "number",
+                        cellEdited: updateMachine,
+                        formatter: function(cell) {
+                            const value = cell.getValue();
+                            let color = "var(--success-color)";
+                            
+                            if (value > VIBRATION_THRESHOLD_DANGER) {
+                                color = "var(--danger-color)";
+                            } else if (value > VIBRATION_THRESHOLD_WARNING) {
+                                color = "var(--warning-color)";
+                            }
+                            
+                            return `<span style="color: ${color}; font-weight: 600;">${value}</span>`;
+                        }
+                    },
+                    {
+                        title: "Status", 
+                        field: "id", 
+                        formatter: function(cell) {
+                            const row = cell.getRow().getData();
+                            let status = "Operational";
+                            let color = "var(--success-color)";
+                            
+                            if (row.temperature > TEMP_THRESHOLD_DANGER || row.vibration > VIBRATION_THRESHOLD_DANGER) {
+                                status = "Critical";
+                                color = "var(--danger-color)";
+                            } else if (row.temperature > TEMP_THRESHOLD_WARNING || row.vibration > VIBRATION_THRESHOLD_WARNING) {
+                                status = "Warning";
+                                color = "var(--warning-color)";
+                            }
+                            
+                            return `<span style="color: ${color}; font-weight: 600;">${status}</span>`;
+                        }
+                    },
+                    {
+                        title: "Actions",
+                        formatter: function() {
+                            return `
+                                <button class="btn" style="padding: 4px 8px; font-size: 12px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                    Edit
+                                </button>
+                            `;
+                        },
+                        width: 100,
+                        hozAlign: "center",
+                        cellClick: function(e, cell) {
+                            e.stopPropagation();
+                            const row = cell.getRow();
+                            row.toggleSelect();
+                        }
+                    }
+                ]
+            });
+        }
+
+        // Update machine state with enhanced visual feedback
+        function updateMachine(cell) {
+            const row = cell.getRow();
+            const updatedMachineData = row.getData();
+            const machineElement = document.getElementById(`machine-${updatedMachineData.id}`);
+            
+            if (!machineElement) return;
+            
+            // Find the machine in our data array and update it
+            const machineIndex = machineData.findIndex(m => m.id === updatedMachineData.id);
+            if (machineIndex !== -1) {
+                machineData[machineIndex] = updatedMachineData;
+            }
+            
+            // Create a new machine cube with updated data
+            const newMachineCube = createMachineCube(updatedMachineData);
+            
+            // Replace the old cube with the new one
+            machineElement.parentNode.replaceChild(newMachineCube, machineElement);
+            
+            // If this was the selected machine, update details
+            if (selectedMachineId === updatedMachineData.id) {
+                showMachineDetails(updatedMachineData);
+            }
+        }
+
+        // Rotate view controls
+        document.getElementById('rotate-left').addEventListener('click', () => {
+            rotationY -= 15;
+            document.getElementById('factory-container').style.transform = 
+                `rotateX(20deg) rotateZ(${rotationY}deg)`;
+        });
+        
+        document.getElementById('rotate-right').addEventListener('click', () => {
+            rotationY += 15;
+            document.getElementById('factory-container').style.transform = 
+                `rotateX(20deg) rotateZ(${rotationY}deg)`;
+        });
+
+        // Add machine with enhanced random data
+        document.getElementById('add-machine').addEventListener('click', () => {
+            const newMachine = {
+                id: nextMachineId++,
+                temperature: Math.floor(Math.random() * 100),
+                vibration: Math.floor(Math.random() * 100)
+            };
+
+            machineData.push(newMachine);
+            renderFactory();
+            createDataTable();
+        });
+
+        // Remove machine with animation
+        document.getElementById('remove-machine').addEventListener('click', () => {
+            if (machineData.length > 0) {
+                // If a machine is selected, remove that one
+                if (selectedMachineId) {
+                    const index = machineData.findIndex(m => m.id === selectedMachineId);
+                    if (index !== -1) {
+                        // Animate removal
+                        const machineElement = document.getElementById(`machine-${selectedMachineId}`);
+                        if (machineElement) {
+                            machineElement.style.transform = 'scale(0.5) translateY(50px)';
+                            machineElement.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                machineData.splice(index, 1);
+                                selectedMachineId = null;
+                                document.getElementById('machine-details').classList.remove('active');
+                                renderFactory();
+                                createDataTable();
+                            }, 300);
+                            return;
+                        }
+                    }
+                }
+                
+                // If no machine is selected or the selected one wasn't found, remove the last one
+                machineData.pop();
+                renderFactory();
+                createDataTable();
+            }
+        });
+
+        // Simulate failure button
+        document.getElementById('simulate-failure').addEventListener('click', () => {
+            if (machineData.length > 0) {
+                // Select a random machine or use the selected one
+                const targetIndex = selectedMachineId 
+                    ? machineData.findIndex(m => m.id === selectedMachineId)
+                    : Math.floor(Math.random() * machineData.length);
+                
+                if (targetIndex !== -1) {
+                    // Simulate critical failure with high temperature and vibration
+                    machineData[targetIndex].temperature = Math.floor(Math.random() * 30) + 80; // 80-110
+                    machineData[targetIndex].vibration = Math.floor(Math.random() * 30) + 70; // 70-100
+                    
+                    renderFactory();
+                    createDataTable();
+                    
+                    // Flash the affected machine
+                    const machineElement = document.getElementById(`machine-${machineData[targetIndex].id}`);
+                    if (machineElement) {
+                        machineElement.style.animation = 'none';
+                        setTimeout(() => {
+                            machineElement.style.animation = '';
+                        }, 10);
+                    }
+                }
+            }
+        });
+
+        // Reset simulation
+        document.getElementById('reset-simulation').addEventListener('click', () => {
+            // Reset all machines to normal values
+            machineData.forEach(machine => {
+                machine.temperature = Math.floor(Math.random() * 30) + 20; // 20-50
+                machine.vibration = Math.floor(Math.random() * 20) + 10; // 10-30
+            });
+            
+            renderFactory();
+            createDataTable();
+        });
+
+        // Export data
+        document.getElementById('export-data').addEventListener('click', () => {
+            // Create CSV content
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Machine ID,Temperature (°C),Vibration (Hz),Status\n";
+            
+            machineData.forEach(machine => {
+                const status = getStatusText(machine);
+                csvContent += `${machine.id},${machine.temperature},${machine.vibration},${status}\n`;
+            });
+            
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "factory_data.csv");
+            document.body.appendChild(link);
+            
+            // Trigger download
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Import data from Excel or CSV
+        document.getElementById('import-data').addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.csv')) {
+                reader.onload = (event) => {
+                    const csvData = event.target.result;
+                    processCSVData(csvData);
+                };
+                reader.readAsText(file);
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                reader.onload = (event) => {
+                    const data = new Uint8Array(event.target.result);
+                    processExcelData(data);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('Please select a CSV or Excel file.');
+            }
+            
+            // Reset the file input
+            e.target.value = '';
+        });
+
+        // Process CSV data
+        function processCSVData(csvData) {
+            // Split the CSV into rows and parse
+            const rows = csvData.split('\n');
+            const headers = rows[0].split(',').map(header => header.trim());
+            
+            // Find column indices
+            const idIndex = headers.findIndex(h => h.toLowerCase().includes('id') || h.toLowerCase().includes('machine'));
+            const tempIndex = headers.findIndex(h => h.toLowerCase().includes('temp'));
+            const vibIndex = headers.findIndex(h => h.toLowerCase().includes('vib'));
+            
+            if (idIndex === -1 || tempIndex === -1 || vibIndex === -1) {
+                alert('CSV file must contain columns for Machine ID, Temperature, and Vibration only');
+                return;
+            }
+            
+            // Parse data rows
+            const importedMachines = [];
+            for (let i = 1; i < rows.length; i++) {
+                if (!rows[i].trim()) continue;
+                
+                const cells = rows[i].split(',');
+                const id = parseInt(cells[idIndex].trim());
+                const temperature = parseFloat(cells[tempIndex].trim());
+                const vibration = parseFloat(cells[vibIndex].trim());
+                
+                if (!isNaN(id) && !isNaN(temperature) && !isNaN(vibration)) {
+                    importedMachines.push({ id, temperature, vibration });
+                }
+            }
+            
+            importMachineData(importedMachines);
+        }
+
+        // Process Excel data
+        function processExcelData(data) {
+            // Parse the Excel file
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            if (jsonData.length < 2) {
+                alert('Excel file must contain at least a header row and one data row');
+                return;
+            }
+            
+            // Find column indices
+            const headers = jsonData[0].map(h => String(h).toLowerCase());
+            const idIndex = headers.findIndex(h => h.includes('id') || h.includes('machine'));
+            const tempIndex = headers.findIndex(h => h.includes('temp'));
+            const vibIndex = headers.findIndex(h => h.includes('vib'));
+            
+            if (idIndex === -1 || tempIndex === -1 || vibIndex === -1) {
+                alert('Excel file must contain columns for Machine ID, Temperature, and Vibration only');
+                return;
+            }
+            
+            // Parse data rows
+            const importedMachines = [];
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row || row.length === 0) continue;
+                
+                const id = parseInt(row[idIndex]);
+                const temperature = parseFloat(row[tempIndex]);
+                const vibration = parseFloat(row[vibIndex]);
+                
+                if (!isNaN(id) && !isNaN(temperature) && !isNaN(vibration)) {
+                    importedMachines.push({ id, temperature, vibration });
+                }
+            }
+            
+            importMachineData(importedMachines);
+        }
+
+        // Import machine data into the application
+        function importMachineData(importedMachines) {
+            if (importedMachines.length === 0) {
+                alert('No valid machine data found in the file');
+                return;
+            }
+            
+            // Update nextMachineId to be higher than any imported ID
+            const highestId = Math.max(...importedMachines.map(m => m.id));
+            nextMachineId = highestId + 1;
+            
+            // Replace existing machine data with imported data
+            // Ensure only id, temperature, and vibration are included
+            machineData = importedMachines.map(machine => ({
+                id: machine.id,
+                temperature: machine.temperature,
+                vibration: machine.vibration
+            }));
+            
+            // Reset selection
+            selectedMachineId = null;
+            document.getElementById('machine-details').classList.remove('active');
+            
+            // Update the UI
+            renderFactory();
+            createDataTable();
+            
+            alert(`Successfully imported ${importedMachines.length} machines`);
+        }
+
+        // Initialize
+        function initializeMachines() {
+            for (let i = 0; i < 6; i++) {
+                const newMachine = {
+                    id: nextMachineId++,
+                    temperature: Math.floor(Math.random() * 100),
+                    vibration: Math.floor(Math.random() * 100)
+                };
+                machineData.push(newMachine);
+            }
+            renderFactory();
+            createDataTable();
+        }
+
+        // Start the application
+        initializeMachines();
+    </script>
+</body>
+</html>
+
